@@ -1,4 +1,6 @@
-//Command for the timer engine
+// Commands sent to the timer engine.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TimerCommand {
     Start,
     Pause,
@@ -7,14 +9,14 @@ pub enum TimerCommand {
     Quit,
 }
 
-
-//Message the timer sends to others, for ui and other
+// Events emitted by the timer engine for a UI or other consumer.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TimerEvent {
     Started,
     Tick {
-        remaining_secs : u64,
-        elapsed_secs : u64,
-        progress : f64,
+        remaining_secs: u64,
+        elapsed_secs: u64,
+        progress: f64,
     },
     Paused,
     Resumed,
