@@ -9,11 +9,12 @@ use crate::{
         engine::run_timer_thread,
         messages::{TimerCommand, TimerEvent},
         timer::Timer,
-    },
+    }, ui::app,
 };
 
 mod cli;
 mod timer;
+mod ui;
 
 fn main() {
     let cli = Cli::parse();
@@ -38,6 +39,9 @@ fn main() {
             });
 
             command_sender.send(TimerCommand::Start).unwrap();
+
+            //We want to move this later so another thread handles the instate stuff
+            //So main only handles the initiation and closing of threads.
 
             // Iterating over Receiver blocks main until the worker sends an event.
             // It ends if every event sender is dropped, unless we break first.
