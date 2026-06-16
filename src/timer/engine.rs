@@ -75,7 +75,12 @@ fn run_timer_thread_with_interval(
                     state = TimerState::Running;
 
                     // Tell main that the state transition succeeded.
-                    if events.send(TimerEvent::Started).is_err() {
+                    if events
+                        .send(TimerEvent::Started {
+                            duration: timer.remaining_secs(),
+                        })
+                        .is_err()
+                    {
                         return;
                     }
 

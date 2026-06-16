@@ -30,12 +30,6 @@ impl Timer {
         self.duration.saturating_sub(self.remaining).as_secs()
     }
 
-    pub fn remaining_time(t: u64) -> String {
-        let minutes = t / 60;
-        let seconds = t % 60;
-        format!("{minutes:02}:{seconds:02}")
-    }
-
     pub fn progress(&self) -> f64 {
         let total = self.duration.as_secs_f64();
 

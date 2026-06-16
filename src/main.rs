@@ -9,7 +9,8 @@ use crate::{
         engine::run_timer_thread,
         messages::{TimerCommand, TimerEvent},
         timer::Timer,
-    }, ui::app,
+    },
+    ui::app,
 };
 
 mod cli;
@@ -38,33 +39,14 @@ fn main() {
                 run_timer_thread(timer, command_receiver, event_sender);
             });
 
+
+            let ui_thread = thread::spawn(move || app::start(event_receiver));
+
             command_sender.send(TimerCommand::Start).unwrap();
-
-            //We want to move this later so another thread handles the instate stuff
-            //So main only handles the initiation and closing of threads.
-
-            // Iterating over Receiver blocks main until the worker sends an event.
-            // It ends if every event sender is dropped, unless we break first.
-            for event in event_receiver {
-                match event {
-                    // A Tick carries a snapshot; only remaining_secs is displayed here.
-                    TimerEvent::Tick { remaining_secs, .. } => {
-                        println!("Remaining: {}", Timer::remaining_time(remaining_secs));
-                    }
-                    // Finished means the worker has completed the countdown.
-                    TimerEvent::Finished => {
-                        println!("Done");
-                        break;
-                    }
-                    
-                    TimerEvent::Started
-                    | TimerEvent::Paused
-                    | TimerEvent::Resumed
-                    | TimerEvent::Stopped => {}
-                }
-            }
+            
 
             // Wait for the worker to fully exit and propagate a panic if it had one.
+            ui_thread.join().unwrap().unwrap();
             timer_thread.join().unwrap();
         }
     }

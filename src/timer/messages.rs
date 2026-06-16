@@ -12,7 +12,9 @@ pub enum TimerCommand {
 // Events emitted by the timer engine for a UI or other consumer.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TimerEvent {
-    Started,
+    Started {
+        duration: u64,
+    },
     Tick {
         remaining_secs: u64,
         elapsed_secs: u64,
