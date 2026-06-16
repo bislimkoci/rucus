@@ -2,7 +2,12 @@ use std::time::Duration;
 
 use crossbeam::channel::{Receiver, TryRecvError};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::{
+    layout::{Alignment, Constraint, Direction, Layout},
+    style::{Color, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Gauge, Paragraph},
+};
 
 use crate::timer::messages::TimerEvent;
 
@@ -14,6 +19,8 @@ enum TimerStatus {
     Stopped,
     Finished,
 }
+
+const ORANGE: Color = Color::Rgb(255, 165, 0);
 
 impl TimerStatus {
     fn label(self) -> &'static str {
@@ -72,19 +79,75 @@ impl App {
     }
 
     fn render(&self, frame: &mut ratatui::Frame) {
-        let progress = (self.progress.clamp(0.0, 1.0) * 100.0).round();
-        let text = format!(
-            "Status: {}\nDuration: {}\nRemaining: {}\nElapsed: {}\nProgress: {:.0}%\n\nPress q or Esc to quit.",
-            self.status.label(),
-            format_time(self.duration_secs),
-            format_time(self.remaining_secs),
-            format_time(self.elapsed_secs),
-            progress,
-        );
+        let orange = Style::default().fg(ORANGE);
+        let progress = self.progress.clamp(0.0, 1.0);
+        let progress_percent = (progress * 100.0).round();
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(11),
+                Constraint::Length(3),
+                Constraint::Length(3),
+                Constraint::Min(0),
+            ])
+            .split(frame.area());
 
-        let widget =
-            Paragraph::new(text).block(Block::default().borders(Borders::ALL).title("Rucus"));
-        frame.render_widget(widget, frame.area());
+        let rucus_block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(orange)
+            .title("Rucus");
+        let timer_area = rucus_block.inner(layout[0]);
+        let timer_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(timer_area);
+
+        let total_block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(orange)
+            .title("Total Duration");
+        let remaining_block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(orange)
+            .title("Remaining Time");
+
+        let total_duration = Paragraph::new(big_time_lines(&format_time(self.duration_secs)))
+            .style(orange)
+            .alignment(Alignment::Center)
+            .block(total_block);
+
+        let remaining_time = Paragraph::new(big_time_lines(&format_time(self.remaining_secs)))
+            .style(orange)
+            .alignment(Alignment::Center)
+            .block(remaining_block);
+
+        let progress_bar = Gauge::default()
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(orange)
+                    .title("Progress"),
+            )
+            .style(orange)
+            .gauge_style(orange)
+            .ratio(progress)
+            .label(format!("{progress_percent:.0}%"));
+
+        let status = Paragraph::new(self.status.label())
+            .style(orange)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(orange)
+                    .title("Status"),
+            );
+
+        frame.render_widget(rucus_block, layout[0]);
+        frame.render_widget(total_duration, timer_layout[0]);
+        frame.render_widget(remaining_time, timer_layout[1]);
+        frame.render_widget(progress_bar, layout[1]);
+        frame.render_widget(status, layout[2]);
     }
 
     fn update(&mut self, events: &Receiver<TimerEvent>) {
@@ -167,4 +230,44 @@ fn format_time(total_secs: u64) -> String {
     let minutes = total_secs / 60;
     let seconds = total_secs % 60;
     format!("{minutes:02}:{seconds:02}")
+}
+
+fn big_time_lines(time: &str) -> Vec<Line<'static>> {
+    let mut rows = vec![
+        String::new(),
+        String::new(),
+        String::new(),
+        String::new(),
+        String::new(),
+    ];
+
+    for ch in time.chars() {
+        let digit = big_digit(ch);
+
+        for (row, piece) in rows.iter_mut().zip(digit) {
+            row.push_str(piece);
+            row.push(' ');
+        }
+    }
+
+    rows.into_iter()
+        .map(|row| Line::from(Span::styled(row, Style::default().fg(ORANGE))))
+        .collect()
+}
+
+fn big_digit(ch: char) -> [&'static str; 5] {
+    match ch {
+        '0' => ["███", "█ █", "█ █", "█ █", "███"],
+        '1' => [" ██", "  █", "  █", "  █", "  █"],
+        '2' => ["███", "  █", "███", "█  ", "███"],
+        '3' => ["███", "  █", "███", "  █", "███"],
+        '4' => ["█ █", "█ █", "███", "  █", "  █"],
+        '5' => ["███", "█  ", "███", "  █", "███"],
+        '6' => ["███", "█  ", "███", "█ █", "███"],
+        '7' => ["███", "  █", "  █", "  █", "  █"],
+        '8' => ["███", "█ █", "███", "█ █", "███"],
+        '9' => ["███", "█ █", "███", "  █", "███"],
+        ':' => ["   ", " █ ", "   ", " █ ", "   "],
+        _ => ["   ", "   ", "   ", "   ", "   "],
+    }
 }

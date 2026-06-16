@@ -7,7 +7,7 @@ use crate::{
     cli::Cli,
     timer::{
         engine::run_timer_thread,
-        messages::{TimerCommand, TimerEvent},
+        messages::TimerCommand,
         timer::Timer,
     },
     ui::app,
